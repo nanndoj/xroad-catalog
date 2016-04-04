@@ -15,16 +15,19 @@ import java.util.stream.Collectors;
 @Getter
 @Setter
 @ToString(exclude = "subsystems")
-// Entity graph defining tree member-subsystem-service, but not service-wsdl.
+// Entity graph defining the full tree member-subsystem-service-wsdl.
 @NamedEntityGraph(
-        name = "member.all-but-wsdl-tree.graph",
+        name = "member.full-tree.graph",
         attributeNodes = {
                 @NamedAttributeNode(value = "subsystems", subgraph = "subsystem.services.graph")
         },
         subgraphs = {
                 @NamedSubgraph(
                         name = "subsystem.services.graph",
-                        attributeNodes = @NamedAttributeNode(value = "services"))
+                        attributeNodes = @NamedAttributeNode(value = "services", subgraph = "service.wsdl.graph")),
+                @NamedSubgraph(
+                        name = "service.wsdl.graph",
+                        attributeNodes = @NamedAttributeNode(value = "wsdls")),
         }
 )
 @NamedQueries({
@@ -78,9 +81,13 @@ public class Member {
     @GeneratedValue(strategy = GenerationType.SEQUENCE, generator = "MEMBER_GEN")
     @SequenceGenerator(name = "MEMBER_GEN", sequenceName = "MEMBER_ID_SEQ", allocationSize = 1)
     private long id;
+    @Column(nullable = false)
     private String xRoadInstance;
+    @Column(nullable = false)
     private String memberClass;
+    @Column(nullable = false)
     private String memberCode;
+    @Column(nullable = false)
     private String name;
     @Embedded
     private StatusInfo statusInfo = new StatusInfo();
