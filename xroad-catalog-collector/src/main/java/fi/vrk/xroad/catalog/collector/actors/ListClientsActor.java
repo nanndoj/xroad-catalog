@@ -3,8 +3,11 @@ package fi.vrk.xroad.catalog.collector.actors;
 import akka.actor.ActorRef;
 import akka.actor.Terminated;
 import akka.actor.UntypedActor;
+import fi.vrk.xroad.catalog.collector.XRoadCatalogCollector;
 import fi.vrk.xroad.catalog.collector.extension.SpringExtension;
 import fi.vrk.xroad.catalog.collector.util.ClientTypeUtil;
+import fi.vrk.xroad.catalog.collector.util.XRoadCatalogID;
+import fi.vrk.xroad.catalog.collector.util.XRoadCatalogMessage;
 import fi.vrk.xroad.catalog.collector.wsimport.ClientListType;
 import fi.vrk.xroad.catalog.collector.wsimport.ClientType;
 import fi.vrk.xroad.catalog.collector.wsimport.XRoadObjectType;
@@ -14,8 +17,8 @@ import fi.vrk.xroad.catalog.persistence.entity.MemberId;
 import fi.vrk.xroad.catalog.persistence.entity.Subsystem;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.beans.factory.annotation.Value;
 import org.springframework.beans.factory.annotation.Qualifier;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Scope;
 import org.springframework.stereotype.Component;
 import org.springframework.web.client.RestOperations;
@@ -33,11 +36,11 @@ import java.util.concurrent.atomic.AtomicInteger;
 @Component
 @Scope("prototype")
 @Slf4j
-public class ListClientsActor extends UntypedActor {
+public class ListClientsActor extends XRoadCatalogActor {
 
     public static final String START_COLLECTING = "StartCollecting";
 
-    private static AtomicInteger COUNTER = new AtomicInteger(0);
+    //private static AtomicInteger COUNTER = new AtomicInteger(0);
     // to test fault handling
     private static boolean FORCE_FAILURES = false;
 
@@ -71,7 +74,7 @@ public class ListClientsActor extends UntypedActor {
 
     @Override
     public void postStop() throws Exception {
-        log.info("postStop {}", this.hashCode());
+        log.info("postStop {}", COUNTER);
         super.postStop();
     }
 
@@ -87,7 +90,8 @@ public class ListClientsActor extends UntypedActor {
     @Override
     public void onReceive(Object message) throws Exception {
 
-        if (START_COLLECTING.equals(message)) {
+        String s = (String) handleXRoadCatalogMessage(message);
+        if (START_COLLECTING.equals(s)) {
 
             String listClientsUrl = host + "/listClients";
 
@@ -119,14 +123,19 @@ public class ListClientsActor extends UntypedActor {
             catalogService.saveAllMembersAndSubsystems(m.values());
             for (ClientType clientType : clientList.getMember()) {
                 if (XRoadObjectType.SUBSYSTEM.equals(clientType.getId().getObjectType())) {
-                    listMethodsPoolRef.tell(clientType, getSelf());
+                    XRoadCatalogID id = createXRoadCatalogIDForChild();
+                    try {
+                        listMethodsPoolRef.tell(new XRoadCatalogMessage(id, clientType), getSelf
+
+                                ());
+                    } catch (Throwable t) {
+                        log.error("Failed to send message {}", t);
+                        currentTransaction.removeChild(id.getChildID());
+                        throw t;
+                    }
                 }
             }
             log.info("all clients (" + (counter-1) + ") sent to actor");
-        } else if (message instanceof Terminated) {
-            throw new RuntimeException("Terminated: " + message);
-        } else {
-            log.error("Unable to handle message {}", message);
         }
     }
 }

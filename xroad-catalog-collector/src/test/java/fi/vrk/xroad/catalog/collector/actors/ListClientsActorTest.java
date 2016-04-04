@@ -7,6 +7,8 @@ import akka.testkit.JavaTestKit;
 import akka.testkit.TestActorRef;
 import akka.testkit.TestKit;
 import com.google.common.collect.HashMultiset;
+import fi.vrk.xroad.catalog.collector.util.XRoadCatalogID;
+import fi.vrk.xroad.catalog.collector.util.XRoadCatalogMessage;
 import fi.vrk.xroad.catalog.collector.wsimport.ClientListType;
 import fi.vrk.xroad.catalog.collector.wsimport.ClientType;
 import fi.vrk.xroad.catalog.collector.wsimport.XRoadClientIdentifierType;
@@ -118,7 +120,8 @@ public class ListClientsActorTest extends TestKit {
     //    doNothing().when(listMethodsPoolRef).tell(Matchers.any(ClientType.class), Matchers.any(ActorRef.class));
 
         // Call onReceive
-        listClientsActor.onReceive(ListClientsActor.START_COLLECTING);
+        listClientsActor.onReceive(new XRoadCatalogMessage(new XRoadCatalogID(1,1),
+                ListClientsActor.START_COLLECTING));
 
         Set<Member> expectedMembers = new HashSet<>();
         Member member1 = new Member("FI", "GOV", "member1", "member1");

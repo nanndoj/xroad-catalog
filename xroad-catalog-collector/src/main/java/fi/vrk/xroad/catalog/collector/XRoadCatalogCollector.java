@@ -9,6 +9,8 @@ import akka.event.Logging;
 import akka.event.LoggingAdapter;
 import fi.vrk.xroad.catalog.collector.actors.Supervisor;
 import fi.vrk.xroad.catalog.collector.extension.SpringExtension;
+import fi.vrk.xroad.catalog.collector.util.XRoadCatalogID;
+import fi.vrk.xroad.catalog.collector.util.XRoadCatalogMessage;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.boot.SpringApplication;
 import org.springframework.boot.autoconfigure.EnableAutoConfiguration;
@@ -25,6 +27,7 @@ import org.springframework.context.annotation.Configuration;
 @EnableAutoConfiguration
 @ComponentScan("fi.vrk.xroad.catalog.collector.configuration")
 public class XRoadCatalogCollector  {
+    public static final String DONE = "Done";
 
     public static void main(String[] args) throws Exception {
 
@@ -47,25 +50,12 @@ public class XRoadCatalogCollector  {
 
         final boolean START_COLLECTING = true;
         if (START_COLLECTING) {
-            supervisor.tell(Supervisor.START_COLLECTING, null);
-        }
-
-        // (TODO: kludge, for now) to let all actors process their mailboxes
-        Thread.sleep(30000);
-
-        // Poison pill will be queued with a priority of 100 as the last
-        // message
-        supervisor.tell(PoisonPill.getInstance(), null);
-
-        while (!supervisor.isTerminated()) {
-            Thread.sleep(100);
+            supervisor.tell(new XRoadCatalogMessage(new XRoadCatalogID(1, 1), Supervisor.START_COLLECTING), null);
         }
 
 
-        log.info("Shutting down");
 
-        system.shutdown();
-        system.awaitTermination();
+        log.info("End of main");
     }
 
 }

@@ -1,11 +1,11 @@
 package fi.vrk.xroad.catalog.collector.actors;
 
-import akka.actor.ActorRef;
-import akka.actor.OneForOneStrategy;
-import akka.actor.Terminated;
-import akka.actor.UntypedActor;
+import akka.actor.*;
+import akka.routing.ConsistentHashingPool;
 import akka.routing.SmallestMailboxPool;
+import fi.vrk.xroad.catalog.collector.XRoadCatalogCollector;
 import fi.vrk.xroad.catalog.collector.extension.SpringExtension;
+import fi.vrk.xroad.catalog.collector.util.XRoadCatalogMessage;
 import fi.vrk.xroad.catalog.persistence.CatalogService;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -14,6 +14,8 @@ import org.springframework.context.annotation.Scope;
 import org.springframework.stereotype.Component;
 import scala.Option;
 import scala.concurrent.duration.Duration;
+
+import java.util.concurrent.atomic.AtomicInteger;
 
 import static akka.actor.SupervisorStrategy.restart;
 
@@ -25,9 +27,10 @@ import static akka.actor.SupervisorStrategy.restart;
 @Component
 @Scope("prototype")
 @Slf4j
-public class Supervisor extends UntypedActor {
+public class Supervisor extends XRoadCatalogActor {
 
     public static final String START_COLLECTING = "StartCollecting";
+
 
     public static final String LIST_CLIENTS_ACTOR_ROUTER = "list-clients-actor-router";
     public static final String LIST_METHODS_ACTOR_ROUTER = "list-methods-actor-router";
@@ -63,11 +66,11 @@ public class Supervisor extends UntypedActor {
                 .props(springExtension.props("listClientsActor")),
                 LIST_CLIENTS_ACTOR_ROUTER);
 
-        listMethodsPoolRouter = getContext().actorOf(new SmallestMailboxPool(listMethodsPoolSize)
+        listMethodsPoolRouter = getContext().actorOf(new ConsistentHashingPool(listMethodsPoolSize)
                         .props(springExtension.props("listMethodsActor")),
                 LIST_METHODS_ACTOR_ROUTER);
 
-        fetchWsdlPoolRouter = getContext().actorOf(new SmallestMailboxPool(fetchWsdlPoolSize)
+        fetchWsdlPoolRouter = getContext().actorOf(new ConsistentHashingPool(fetchWsdlPoolSize)
                         .props(springExtension.props("fetchWsdlActor")),
                 FETCH_WSDL_ACTOR_ROUTER);
 
@@ -77,12 +80,11 @@ public class Supervisor extends UntypedActor {
     @Override
     public void onReceive(Object message) throws Exception {
 
-        if (START_COLLECTING.equals(message)) {
-            listClientsPoolRouter.tell(ListClientsActor.START_COLLECTING, getSelf());
-        } else if (message instanceof Terminated) {
-            throw new RuntimeException("Terminated: " + message);
-        } else {
-            log.error("Unable to handle message {}", message);
+        String m = (String) handleXRoadCatalogMessage(message);
+        if (START_COLLECTING.equals(m)) {
+            listClientsPoolRouter.tell(new XRoadCatalogMessage(createXRoadCatalogIDForChild(), ListClientsActor
+                    .START_COLLECTING), getSelf
+                    ());
         }
     }
 
@@ -98,4 +100,11 @@ public class Supervisor extends UntypedActor {
         super.preRestart(reason, message);
     }
 
+    @Override
+    protected void handleEndOfChildren() {
+        super.handleEndOfChildren();
+        getSelf()
+                .tell(PoisonPill.getInstance(), null);
+
+    }
 }

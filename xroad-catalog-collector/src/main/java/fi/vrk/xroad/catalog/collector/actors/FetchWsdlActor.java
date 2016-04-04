@@ -3,6 +3,9 @@ package fi.vrk.xroad.catalog.collector.actors;
 import akka.actor.Terminated;
 import akka.actor.UntypedActor;
 import com.google.common.base.Strings;
+import fi.vrk.xroad.catalog.collector.XRoadCatalogCollector;
+import fi.vrk.xroad.catalog.collector.util.XRoadCatalogID;
+import fi.vrk.xroad.catalog.collector.util.XRoadCatalogMessage;
 import fi.vrk.xroad.catalog.collector.wsimport.XRoadServiceIdentifierType;
 import fi.vrk.xroad.catalog.persistence.CatalogService;
 import fi.vrk.xroad.catalog.persistence.entity.ServiceId;
@@ -45,23 +48,38 @@ public class FetchWsdlActor extends UntypedActor {
 
     @Override
     public void onReceive(Object message) throws Exception {
-        if (message instanceof XRoadServiceIdentifierType) {
-            log.info("fetching wsdl [{}] {}", COUNTER.addAndGet(1), message);
-            XRoadServiceIdentifierType service = (XRoadServiceIdentifierType) message;
-            // get wsdl
-            String url = buildUri(service);
-            String wsdl = restOperations.getForObject(url, String.class);
-            log.info("url: {} received wsdl: {} for ", url, wsdl);
-            catalogService.saveWsdl(createSubsystemId(service),
-                    createServiceId(service),
-                    wsdl);
-            log.info("saved wsdl successfully");
-
+        if (message instanceof XRoadCatalogMessage) {
+            XRoadCatalogMessage m = (XRoadCatalogMessage)message;
+            try {
+                log.info("fetching wsdl [{}] {}", COUNTER.addAndGet(1), message);
+                XRoadServiceIdentifierType service = (XRoadServiceIdentifierType) m.getPayload();
+                // get wsdl
+                String url = buildUri(service);
+                String wsdl = restOperations.getForObject(url, String.class);
+                log.info("url: {} received wsdl: {} for ", url, wsdl);
+                catalogService.saveWsdl(createSubsystemId(service),
+                        createServiceId(service),
+                        wsdl);
+                log.info("{} saved wsdl successfully", COUNTER);
+            } catch (Exception e) {
+                log.error("Fetching wsld failed. {}", e);
+                throw e;
+            }
+            finally {
+                getSender().tell(m.getId(), getSelf());
+            }
         } else if (message instanceof Terminated) {
             throw new RuntimeException("Terminated: " + message);
         } else {
             log.error("Unable to handle message {}", message);
         }
+    }
+
+    @Override
+    public void postStop() throws Exception {
+        log.info("postStop {}", COUNTER);
+
+        super.postStop();
     }
 
     private ServiceId createServiceId(XRoadServiceIdentifierType service) {
