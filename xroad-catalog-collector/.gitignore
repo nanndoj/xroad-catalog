@@ -3,3 +3,5 @@
 *.class
 target/
 .gradle
+packages/xroad-catalog-collector/redhat/RPMS/
+packages/xroad-catalog-collector/redhat/SRPMS/

@@ -52,12 +52,13 @@ public abstract class XRoadCatalogActor extends UntypedActor {
             return m.getPayload();
         } else if (message instanceof XRoadCatalogID) {
             XRoadCatalogID id = (XRoadCatalogID) message;
-            log.info("{} Class {}. Child sent done message {}. TransactionMap {}", COUNTER, this.getClass(), id,
+            log.info("{} {} - Child sent done message {}. TransactionMap {}", this.hashCode(), this.getClass(), id,
                     transactionMap);
             XRoadCatalogTransaction transaction = transactionMap.get(id.getParentID());
-            log.info("{} Class {}. Child done. Message {}. Transaction {}", COUNTER, this.getClass(), id, transaction);
+            log.info("{} {} - Child done. Message {}. Transaction {}", this.hashCode(), this.getClass(), id,
+                    transaction);
             if (transaction.removeChild(id.getChildID())) {
-                log.info("{} {} Last child removed, sending message to sender", COUNTER, this.getClass());
+                log.info("{} {} - Last child removed, sending message to sender", this.hashCode(), this.getClass());
                 transaction.getOriginalSender().tell(new XRoadCatalogID(transaction.getOriginalParentId(), id
                         .getParentID()), getSelf());
                 handleEndOfChildren();
@@ -73,7 +74,7 @@ public abstract class XRoadCatalogActor extends UntypedActor {
 
     protected XRoadCatalogID createXRoadCatalogIDForChild() {
         long myChildId = generateChildId();
-        log.info("{} Creating child id {} for {} ", COUNTER, myChildId, myId);
+        log.info("{} {} - Creating child id {} for {} ", this.hashCode(), this.getClass(), myChildId, myId);
         currentTransaction.addChildId(myChildId);
         return new XRoadCatalogID(myId, myChildId);
     }

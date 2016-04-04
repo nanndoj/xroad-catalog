@@ -18,6 +18,6 @@ public class XRoadCatalogMessage implements ConsistentHashingRouter.ConsistentHa
 
     @Override
     public Object consistentHashKey() {
-        return id.getParentID();
+        return id.getChildID();
     }
 }
