@@ -3,6 +3,7 @@ package fi.vrk.xroad.catalog.collector.actors;
 import akka.actor.Terminated;
 import akka.actor.UntypedActor;
 import com.google.common.base.Strings;
+import fi.vrk.xroad.catalog.collector.wsimport.ClientType;
 import fi.vrk.xroad.catalog.collector.wsimport.XRoadServiceIdentifierType;
 import fi.vrk.xroad.catalog.persistence.CatalogService;
 import fi.vrk.xroad.catalog.persistence.entity.ServiceId;
@@ -26,37 +27,30 @@ import java.util.concurrent.atomic.AtomicInteger;
 @Slf4j
 public class FetchWsdlActor extends UntypedActor {
 
-    private static AtomicInteger COUNTER = new AtomicInteger(0);
-    private static final String WSDL_CONTEXT_PATH = "/wsdl";
+    private static AtomicInteger INSTANCE_COUNTER = new AtomicInteger(0);
+    private int instance;
 
-    @Value("${xroad-catalog.fetch-wsdl-host}")
-    private String host;
-
-    public String getHost() {
-        return host;
+    public FetchWsdlActor() {
+        instance = INSTANCE_COUNTER.addAndGet(1);
+        log.info("(---) FetchWsdlActor instance {} created", instance);
     }
 
-    @Autowired
-    @Qualifier("wsdlRestOperations")
-    private RestOperations restOperations;
-
-    @Autowired
-    protected CatalogService catalogService;
 
     @Override
     public void onReceive(Object message) throws Exception {
-        if (message instanceof XRoadServiceIdentifierType) {
-            log.info("fetching wsdl [{}] {}", COUNTER.addAndGet(1), message);
-            XRoadServiceIdentifierType service = (XRoadServiceIdentifierType) message;
-            // get wsdl
-            String url = buildUri(service);
-            String wsdl = restOperations.getForObject(url, String.class);
-            log.info("url: {} received wsdl: {} for ", url, wsdl);
-            catalogService.saveWsdl(createSubsystemId(service),
-                    createServiceId(service),
-                    wsdl);
-            log.info("saved wsdl successfully");
+        log.info("(---) FetchWsdlActor instance {} onReceive {}", instance, message);
 
+        if (message instanceof StartWorkingMessage) {
+            StartWorkingMessage s = (StartWorkingMessage) message;
+            log.info("(---) processing message {}", s);
+            Thread.sleep(1000);
+            WorkDoneMessage m = new WorkDoneMessage(s.getParentId(),
+                    instance,
+                    "(---) done processing at FetchWsdl " + instance);
+            log.info("(---) replying {}", m);
+            getSender().tell(m, getSelf());
+
+        } else if (message instanceof XRoadServiceIdentifierType) {
         } else if (message instanceof Terminated) {
             throw new RuntimeException("Terminated: " + message);
         } else {
@@ -64,37 +58,4 @@ public class FetchWsdlActor extends UntypedActor {
         }
     }
 
-    private ServiceId createServiceId(XRoadServiceIdentifierType service) {
-        ServiceId serviceId = new ServiceId(service.getServiceCode(),
-                service.getServiceVersion());
-        return serviceId;
-    }
-
-    private SubsystemId createSubsystemId(XRoadServiceIdentifierType service) {
-        SubsystemId subsystemId = new SubsystemId(service.getXRoadInstance(),
-                service.getMemberClass(),
-                service.getMemberCode(),
-                service.getSubsystemCode());
-        return subsystemId;
-    }
-
-    private String buildUri(XRoadServiceIdentifierType service) {
-        assert service.getXRoadInstance() != null;
-        assert service.getMemberClass() != null;
-        assert service.getMemberCode() != null;
-        assert service.getServiceCode() != null;
-        assert service.getServiceVersion() != null;
-
-        UriComponentsBuilder builder = UriComponentsBuilder.fromUriString(getHost())
-                .path(WSDL_CONTEXT_PATH)
-                .queryParam("xRoadInstance", service.getXRoadInstance())
-                .queryParam("memberClass", service.getMemberClass())
-                .queryParam("memberCode", service.getMemberCode())
-                .queryParam("serviceCode", service.getServiceCode())
-                .queryParam("version", service.getServiceVersion());
-        if (!Strings.isNullOrEmpty(service.getSubsystemCode())) {
-            builder = builder.queryParam("subsystemCode", service.getSubsystemCode());
-        }
-        return builder.toUriString();
-    }
 }

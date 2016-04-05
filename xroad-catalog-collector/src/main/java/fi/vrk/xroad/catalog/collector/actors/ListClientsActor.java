@@ -36,12 +36,17 @@ import java.util.concurrent.atomic.AtomicInteger;
 public class ListClientsActor extends UntypedActor {
 
     public static final String START_COLLECTING = "StartCollecting";
+    private static AtomicInteger INSTANCE_COUNTER = new AtomicInteger(0);
+    private int instance;
+
+    public ListClientsActor() {
+        instance = INSTANCE_COUNTER.addAndGet(1);
+        log.info("ListClientsActor instance {} created", instance);
+    }
 
     private static AtomicInteger COUNTER = new AtomicInteger(0);
     // to test fault handling
     private static boolean FORCE_FAILURES = false;
-
-    private static final int NO_OF_ACTORS = 5;
 
     @Autowired
     @Qualifier("listClientsRestOperations")
@@ -75,54 +80,21 @@ public class ListClientsActor extends UntypedActor {
         super.postStop();
     }
 
-    private void maybeFail() {
-        if (FORCE_FAILURES) {
-            if (COUNTER.get() % 3 == 0) {
-                log.info("sending test failure {}", hashCode());
-                throw new RuntimeException("test failure at " + hashCode());
-            }
-        }
-    }
-
     @Override
     public void onReceive(Object message) throws Exception {
+        log.info("ListClientsActor instance {} onReceive {}", instance, message);
 
         if (START_COLLECTING.equals(message)) {
 
-            String listClientsUrl = host + "/listClients";
-
-            log.info("Getting client list from {}", listClientsUrl);
-            ClientListType clientList = restOperations.getForObject(listClientsUrl, ClientListType
-                    .class);
-
-            int counter = 1;
-            HashMap<MemberId, Member> m = new HashMap();
-
-            List<Subsystem> subsystems = new ArrayList<>();
-            for (ClientType clientType : clientList.getMember()) {
-                log.info("{} - ClientType {}  ", counter++, ClientTypeUtil.toString(clientType));
-                Member newMember = new Member(clientType.getId().getXRoadInstance(), clientType.getId()
-                        .getMemberClass(),
-                        clientType.getId().getMemberCode(), clientType.getName());
-                newMember.setSubsystems(new HashSet<>());
-                if (m.get(newMember.createKey()) == null) {
-                    m.put(newMember.createKey(), newMember);
-                }
-
-                if (XRoadObjectType.SUBSYSTEM.equals(clientType.getId().getObjectType())) {
-                    Subsystem newSubsystem = new Subsystem(newMember, clientType.getId().getSubsystemCode());
-                    m.get(newMember.createKey()).getAllSubsystems().add(newSubsystem);
-                }
+            for (int i = 0; i < 10; i++) {
+                StartWorkingMessage start = new StartWorkingMessage(i);
+                listMethodsPoolRef.tell(start, getSelf());
             }
 
-            // Save members
-            catalogService.saveAllMembersAndSubsystems(m.values());
-            for (ClientType clientType : clientList.getMember()) {
-                if (XRoadObjectType.SUBSYSTEM.equals(clientType.getId().getObjectType())) {
-                    listMethodsPoolRef.tell(clientType, getSelf());
-                }
-            }
-            log.info("all clients (" + (counter-1) + ") sent to actor");
+            log.info("all messages sent to actor");
+        } else if (message instanceof String) {
+            log.info("ListClientsActor instance {} received message {}", instance, message);
+
         } else if (message instanceof Terminated) {
             throw new RuntimeException("Terminated: " + message);
         } else {

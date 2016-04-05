@@ -47,6 +47,7 @@ public class XRoadCatalogCollector  {
 
         final boolean START_COLLECTING = true;
         if (START_COLLECTING) {
+            Thread.sleep(1000);
             supervisor.tell(Supervisor.START_COLLECTING, null);
         }
 
