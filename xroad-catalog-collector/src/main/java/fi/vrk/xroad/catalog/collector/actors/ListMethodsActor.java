@@ -3,27 +3,14 @@ package fi.vrk.xroad.catalog.collector.actors;
 import akka.actor.ActorRef;
 import akka.actor.Terminated;
 import akka.actor.UntypedActor;
-import com.typesafe.config.ConfigException;
 import fi.vrk.xroad.catalog.collector.extension.SpringExtension;
-import fi.vrk.xroad.catalog.collector.util.ClientTypeUtil;
-import fi.vrk.xroad.catalog.collector.util.XRoadClient;
-import fi.vrk.xroad.catalog.collector.wsimport.ClientType;
-import fi.vrk.xroad.catalog.collector.wsimport.XRoadClientIdentifierType;
-import fi.vrk.xroad.catalog.collector.wsimport.XRoadObjectType;
-import fi.vrk.xroad.catalog.collector.wsimport.XRoadServiceIdentifierType;
 import fi.vrk.xroad.catalog.persistence.CatalogService;
-import fi.vrk.xroad.catalog.persistence.entity.Member;
-import fi.vrk.xroad.catalog.persistence.entity.Service;
-import fi.vrk.xroad.catalog.persistence.entity.Subsystem;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Scope;
-import org.springframework.jms.IllegalStateException;
 import org.springframework.stereotype.Component;
 
-import java.util.ArrayList;
-import java.util.List;
 import java.util.concurrent.atomic.AtomicInteger;
 
 /**
@@ -97,8 +84,8 @@ public class ListMethodsActor extends UntypedActor {
 
         log.info("(*) ListMethods instance {} onReceive {}", instance, message);
 
-        if (message instanceof NewWorkDoneMessage) {
-            NewWorkDoneMessage doneMessageFromWsdl = (NewWorkDoneMessage) message;
+        if (message instanceof WorkDoneMessage) {
+            WorkDoneMessage doneMessageFromWsdl = (WorkDoneMessage) message;
             if (doneMessageFromWsdl.getListMethodsInstance() != instance) {
                 java.lang.IllegalStateException e = new java.lang.IllegalStateException("wrong instance id: "
                         + doneMessageFromWsdl.getListMethodsInstance() + ", should be: " + instance);
@@ -113,7 +100,7 @@ public class ListMethodsActor extends UntypedActor {
                 // all work is done, success
                 log.info("(*) !!!! all work done from children, signaling 'work done' upstream. {}", doneMessageFromWsdl);
                 ActorRef listClientsActor = doneMessageFromWsdl.getListClientsActor();
-                NewWorkDoneMessage doneMessageFromListMethods = new NewWorkDoneMessage();
+                WorkDoneMessage doneMessageFromListMethods = new WorkDoneMessage();
                 doneMessageFromListMethods.copyFieldsFrom(doneMessageFromWsdl);
                 doneMessageFromListMethods.setListMethodsActor(getSelf());
                 doneMessageFromListMethods.setListMethodsBatch(null);
@@ -121,12 +108,12 @@ public class ListMethodsActor extends UntypedActor {
                 listClientsActor.tell(doneMessageFromListMethods, getSelf());
             }
 
-        } else if (message instanceof NewStartWorkingMessage) {
+        } else if (message instanceof StartWorkingMessage) {
 
-            NewStartWorkingMessage myStartCommand = (NewStartWorkingMessage)message;
+            StartWorkingMessage myStartCommand = (StartWorkingMessage)message;
             log.info("(*) processing start working from {}", myStartCommand.getListClientsInstance());
             for (int i = 0; i < 10; i++) {
-                NewStartWorkingMessage start = new NewStartWorkingMessage();
+                StartWorkingMessage start = new StartWorkingMessage();
                 start.copyFieldsFrom(myStartCommand);
                 start.setListMethodsActor(getSelf());
                 start.setListMethodsBatch(i);

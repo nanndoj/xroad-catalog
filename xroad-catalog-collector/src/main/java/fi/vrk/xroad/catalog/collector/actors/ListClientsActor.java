@@ -80,7 +80,7 @@ public class ListClientsActor extends UntypedActor {
         if (START_COLLECTING.equals(message)) {
 
             for (int i = 0; i < 10; i++) {
-                NewStartWorkingMessage start = new NewStartWorkingMessage();
+                StartWorkingMessage start = new StartWorkingMessage();
                 start.setListClientsActor(getSelf());
                 start.setListClientsBatch(i);
                 start.setListClientsInstance(instance);
@@ -90,8 +90,8 @@ public class ListClientsActor extends UntypedActor {
 
             allSent = true;
             log.info("all messages sent to actor");
-        } else if (message instanceof NewWorkDoneMessage) {
-            NewWorkDoneMessage done = (NewWorkDoneMessage) message;
+        } else if (message instanceof WorkDoneMessage) {
+            WorkDoneMessage done = (WorkDoneMessage) message;
             if (done.getListClientsInstance() != instance) {
                 IllegalStateException e = new IllegalStateException("wrong instance id: " + done.getListClientsInstance() + ", should be: " + instance);
                 log.error(e.toString());

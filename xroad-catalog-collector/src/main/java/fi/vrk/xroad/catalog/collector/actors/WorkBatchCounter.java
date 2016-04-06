@@ -1,6 +1,5 @@
 package fi.vrk.xroad.catalog.collector.actors;
 
-import akka.actor.ActorRef;
 import lombok.EqualsAndHashCode;
 import lombok.Getter;
 import lombok.Setter;
@@ -29,7 +28,7 @@ public class WorkBatchCounter {
     // bit silly currently, tracking each work item by putting Integer "1" into a map...
     private Map<BatchKey, Integer> counters = new HashMap<>();
 
-    public synchronized void startTracking(NewStartWorkingMessage startMessage) {
+    public synchronized void startTracking(StartWorkingMessage startMessage) {
         BatchKey key = createMapKey(startMessage);
         Integer old = counters.get(key);
         if (old != null) {
@@ -62,7 +61,7 @@ public class WorkBatchCounter {
 //        }
     }
 
-    public synchronized void markWorkDone(NewWorkDoneMessage doneMessage) {
+    public synchronized void markWorkDone(WorkDoneMessage doneMessage) {
         BatchKey key = createMapKey(doneMessage);
         Integer workers = counters.get(key);
         if (workers == null) {
