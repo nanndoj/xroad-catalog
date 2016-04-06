@@ -7,7 +7,7 @@ import java.io.Serializable;
 /**
  * Created by janne on 5.4.2016.
  */
-@ToString
+@ToString(callSuper = true)
 public class NewWorkDoneMessage extends ComboIdMessage implements Serializable {
     public NewWorkDoneMessage() {
     }

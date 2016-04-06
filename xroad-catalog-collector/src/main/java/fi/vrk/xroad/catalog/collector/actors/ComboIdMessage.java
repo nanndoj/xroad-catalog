@@ -4,6 +4,7 @@ import akka.actor.ActorRef;
 import lombok.AllArgsConstructor;
 import lombok.Getter;
 import lombok.Setter;
+import lombok.ToString;
 import org.springframework.beans.BeanUtils;
 
 import java.io.Serializable;
@@ -13,6 +14,7 @@ import java.io.Serializable;
  */
 @Getter
 @Setter
+@ToString(callSuper = true)
 public class ComboIdMessage implements Serializable {
     private Integer listClientsBatch;
     private Integer listMethodsBatch;

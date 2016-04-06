@@ -111,6 +111,7 @@ public class ListMethodsActor extends UntypedActor {
             workBatchCounter.logStatus();
             if (allSent && workBatchCounter.allDone(doneMessageFromWsdl.getListClientsBatch())) {
                 // all work is done, success
+                log.info("(*) !!!! all work done from children, signaling 'work done' upstream. {}", doneMessageFromWsdl);
                 ActorRef listClientsActor = doneMessageFromWsdl.getListClientsActor();
                 NewWorkDoneMessage doneMessageFromListMethods = new NewWorkDoneMessage();
                 doneMessageFromListMethods.copyFieldsFrom(doneMessageFromWsdl);
