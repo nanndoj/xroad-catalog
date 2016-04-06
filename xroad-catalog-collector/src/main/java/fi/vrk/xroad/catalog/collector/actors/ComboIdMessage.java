@@ -14,13 +14,13 @@ import java.io.Serializable;
 @Getter
 @Setter
 public class ComboIdMessage implements Serializable {
-    private int listClientsBatch;
-    private int listMethodsBatch;
-    private int fetchWsdlBatch;
+    private Integer listClientsBatch;
+    private Integer listMethodsBatch;
+    private Integer fetchWsdlBatch;
 
-    private int listClientsInstance;
-    private int listMethodsInstance;
-    private int fetchWsdlInstance;
+    private Integer listClientsInstance;
+    private Integer listMethodsInstance;
+    private Integer fetchWsdlInstance;
 
     private ActorRef listClientsActor;
     private ActorRef listMethodsActor;

@@ -28,6 +28,7 @@ import java.util.concurrent.atomic.AtomicInteger;
 @Slf4j
 public class FetchWsdlActor extends UntypedActor {
 
+    private static AtomicInteger WORK_DONE_COUNTER = new AtomicInteger(1);
     private static AtomicInteger INSTANCE_COUNTER = new AtomicInteger(0);
     private int instance;
 
@@ -51,6 +52,9 @@ public class FetchWsdlActor extends UntypedActor {
             NewWorkDoneMessage doneMessageFromListMethods = new NewWorkDoneMessage();
             doneMessageFromListMethods.copyFieldsFrom(myStartCommand);
             doneMessageFromListMethods.setFetchWsdlInstance(instance);
+
+            log.info("WSDLfetching number {} finished, sending 'done' signal upstream", WORK_DONE_COUNTER.getAndAdd(1));
+
             listMethodsActor.tell(doneMessageFromListMethods, getSelf());
 
 

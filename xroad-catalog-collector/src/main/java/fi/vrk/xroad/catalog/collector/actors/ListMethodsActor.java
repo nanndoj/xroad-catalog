@@ -115,8 +115,8 @@ public class ListMethodsActor extends UntypedActor {
                 NewWorkDoneMessage doneMessageFromListMethods = new NewWorkDoneMessage();
                 doneMessageFromListMethods.copyFieldsFrom(doneMessageFromWsdl);
                 doneMessageFromListMethods.setListMethodsActor(getSelf());
-                doneMessageFromListMethods.setListMethodsBatch(-1);
-                doneMessageFromListMethods.setListMethodsInstance(-1);
+                doneMessageFromListMethods.setListMethodsBatch(null);
+                doneMessageFromListMethods.setListMethodsInstance(null);
                 listClientsActor.tell(doneMessageFromListMethods, getSelf());
             }
 

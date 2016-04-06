@@ -21,9 +21,9 @@ public class WorkBatchCounter {
     @EqualsAndHashCode
     @ToString
     private class BatchKey {
-        private int listClientsBatch;
-        private int listMethodsBatch;
-        private int fetchWsdlBatch;
+        private Integer listClientsBatch;
+        private Integer listMethodsBatch;
+        private Integer fetchWsdlBatch;
     }
 
     // bit silly currently, tracking each work item by putting Integer "1" into a map...
@@ -44,7 +44,7 @@ public class WorkBatchCounter {
      * @return
      */
     private BatchKey createMapKey(ComboIdMessage message) {
-        assert(message.getListClientsBatch() != -1);
+        assert(message.getListClientsBatch() != null);
         BatchKey key = new BatchKey();
         key.setListClientsBatch(message.getListClientsBatch());
         key.setListMethodsBatch(message.getListMethodsBatch());
@@ -79,23 +79,23 @@ public class WorkBatchCounter {
         return counters.isEmpty();
     }
 
-    public boolean allDone(int listClientsBatch) {
+    public boolean allDone(Integer listClientsBatch) {
         for (BatchKey key: counters.keySet()) {
-            if (key.getListClientsBatch() == listClientsBatch) {
+            if (listClientsBatch.equals(key.getListClientsBatch())) {
                 return false;
             }
         }
         return true;
     }
 
-    public boolean allDone(int listClientsBatch, int listMethodsBatch) {
-        for (BatchKey key: counters.keySet()) {
-            if (key.getListClientsBatch() == listClientsBatch
-                    && key.getListMethodsBatch() == listMethodsBatch) {
-                return false;
-            }
-        }
-        return true;
-    }
+//    public boolean allDone(int listClientsBatch, int listMethodsBatch) {
+//        for (BatchKey key: counters.keySet()) {
+//            if (key.getListClientsBatch() == listClientsBatch
+//                    && key.getListMethodsBatch() == listMethodsBatch) {
+//                return false;
+//            }
+//        }
+//        return true;
+//    }
 
 }
