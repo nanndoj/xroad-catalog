@@ -1,5 +1,6 @@
 package fi.vrk.xroad.catalog.collector.actors;
 
+import akka.actor.ActorRef;
 import akka.actor.Terminated;
 import akka.actor.UntypedActor;
 import com.google.common.base.Strings;
@@ -40,15 +41,18 @@ public class FetchWsdlActor extends UntypedActor {
     public void onReceive(Object message) throws Exception {
         log.info("(---) FetchWsdlActor instance {} onReceive {}", instance, message);
 
-        if (message instanceof StartWorkingMessage) {
-            StartWorkingMessage s = (StartWorkingMessage) message;
-            log.info("(---) processing message {}", s);
+        if (message instanceof NewStartWorkingMessage) {
+
+            NewStartWorkingMessage myStartCommand = (NewStartWorkingMessage) message;
+            log.info("(*) processing start working from {}", myStartCommand.getListClientsInstance());
             Thread.sleep(1000);
-            WorkDoneMessage m = new WorkDoneMessage(s.getParentId(),
-                    instance,
-                    "(---) done processing at FetchWsdl " + instance);
-            log.info("(---) replying {}", m);
-            getSender().tell(m, getSelf());
+            // reply with "work done"
+            ActorRef listMethodsActor = myStartCommand.getListMethodsActor();
+            NewWorkDoneMessage doneMessageFromListMethods = new NewWorkDoneMessage();
+            doneMessageFromListMethods.copyFieldsFrom(myStartCommand);
+            doneMessageFromListMethods.setFetchWsdlInstance(instance);
+            listMethodsActor.tell(doneMessageFromListMethods, getSelf());
+
 
         } else if (message instanceof XRoadServiceIdentifierType) {
         } else if (message instanceof Terminated) {

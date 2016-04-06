@@ -35,15 +35,15 @@ import java.util.concurrent.atomic.AtomicInteger;
 @Slf4j
 public class ListMethodsActor extends UntypedActor {
 
+    private WorkBatchCounter workBatchCounter = new WorkBatchCounter();
+
     private static AtomicInteger INSTANCE_COUNTER = new AtomicInteger(0);
     private int instance;
 
-    private AtomicInteger childCounter;
     private boolean allSent = false;
 
     public ListMethodsActor() {
         instance = INSTANCE_COUNTER.addAndGet(1);
-        childCounter = new AtomicInteger(0);
         log.info("(*) ListMethodsActor instance {} created", instance);
     }
 
@@ -92,33 +92,46 @@ public class ListMethodsActor extends UntypedActor {
     }
 
 
-    int startWorking = 0;
-
     @Override
     public void onReceive(Object message) throws Exception {
 
         log.info("(*) ListMethods instance {} onReceive {}", instance, message);
 
-        if (message instanceof WorkDoneMessage) {
-            WorkDoneMessage w = (WorkDoneMessage) message;
-            childCounter.decrementAndGet();
-            log.info("(*) ListMethods instance {} received workdone from FetchWsdl {}, "
-                    + "start work came from ListMethods {}, still {} child tasks running",
-                    instance, w.getChildId(), w.getParentId(), childCounter.get());
-
-        } else if (message instanceof StartWorkingMessage) {
-            startWorking++;
-            if (startWorking > 1) {
-                log.info("only starting one work per instance for simplicity");
-                return;
+        if (message instanceof NewWorkDoneMessage) {
+            NewWorkDoneMessage doneMessageFromWsdl = (NewWorkDoneMessage) message;
+            if (doneMessageFromWsdl.getListMethodsInstance() != instance) {
+                java.lang.IllegalStateException e = new java.lang.IllegalStateException("wrong instance id: "
+                        + doneMessageFromWsdl.getListMethodsInstance() + ", should be: " + instance);
+                log.error(e.toString());
+                throw e;
             }
 
+            log.info("ListMethodsActor instance {} received message {}", instance, message);
+            workBatchCounter.markWorkDone(doneMessageFromWsdl);
+            workBatchCounter.logStatus();
+            if (allSent && workBatchCounter.allDone(doneMessageFromWsdl.getListClientsBatch())) {
+                // all work is done, success
+                ActorRef listClientsActor = doneMessageFromWsdl.getListClientsActor();
+                NewWorkDoneMessage doneMessageFromListMethods = new NewWorkDoneMessage();
+                doneMessageFromListMethods.copyFieldsFrom(doneMessageFromWsdl);
+                doneMessageFromListMethods.setListMethodsActor(getSelf());
+                doneMessageFromListMethods.setListMethodsBatch(-1);
+                doneMessageFromListMethods.setListMethodsInstance(-1);
+                listClientsActor.tell(doneMessageFromListMethods, getSelf());
+            }
 
-            log.info("(*) processing start working from {}", ((StartWorkingMessage)message).getParentId());
+        } else if (message instanceof NewStartWorkingMessage) {
+
+            NewStartWorkingMessage myStartCommand = (NewStartWorkingMessage)message;
+            log.info("(*) processing start working from {}", myStartCommand.getListClientsInstance());
             for (int i = 0; i < 10; i++) {
-                StartWorkingMessage start = new StartWorkingMessage(instance);
+                NewStartWorkingMessage start = new NewStartWorkingMessage();
+                start.copyFieldsFrom(myStartCommand);
+                start.setListMethodsActor(getSelf());
+                start.setListMethodsBatch(i);
+                start.setListMethodsInstance(instance);
+                workBatchCounter.startTracking(start);
                 fetchWsdlPoolRef.tell(start, getSelf());
-                childCounter.addAndGet(1);
             }
             Thread.sleep(1000);
             allSent = true;
